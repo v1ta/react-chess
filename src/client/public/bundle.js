@@ -74,10 +74,29 @@
 	var height = (0, _jquery2.default)(document).height();
 	var boardSize = width < height ? width : height;
 
-	var Tile = function (_React$Component) {
-	    _inherits(Tile, _React$Component);
+	var Piece = function (_React$Component) {
+	    _inherits(Piece, _React$Component);
 
-	    function Tile() {
+	    function Piece(props) {
+	        _classCallCheck(this, Piece);
+
+	        return _possibleConstructorReturn(this, (Piece.__proto__ || Object.getPrototypeOf(Piece)).call(this));
+	    }
+
+	    _createClass(Piece, [{
+	        key: 'render',
+	        value: function render() {
+	            return _react2.default.createElement('img', { src: 'assets/' + this.props.piece + '.png', style: this.props.style });
+	        }
+	    }]);
+
+	    return Piece;
+	}(_react2.default.Component);
+
+	var Tile = function (_React$Component2) {
+	    _inherits(Tile, _React$Component2);
+
+	    function Tile(props) {
 	        _classCallCheck(this, Tile);
 
 	        return _possibleConstructorReturn(this, (Tile.__proto__ || Object.getPrototypeOf(Tile)).call(this));
@@ -86,15 +105,26 @@
 	    _createClass(Tile, [{
 	        key: 'render',
 	        value: function render() {
-	            return _react2.default.createElement('div', { className: 'tile', style: this.props.style });
+	            var piece = determinePiece(this.props.tileNum);
+	            return _react2.default.createElement(
+	                'div',
+	                { className: 'tile', style: this.props.style },
+	                piece ? _react2.default.createElement(Piece, {
+	                    style: {
+	                        height: boardSize / 8,
+	                        width: boardSize / 8
+	                    },
+	                    piece: piece
+	                }) : ''
+	            );
 	        }
 	    }]);
 
 	    return Tile;
 	}(_react2.default.Component);
 
-	var Board = function (_React$Component2) {
-	    _inherits(Board, _React$Component2);
+	var Board = function (_React$Component3) {
+	    _inherits(Board, _React$Component3);
 
 	    function Board() {
 	        _classCallCheck(this, Board);
@@ -111,9 +141,11 @@
 	                var flag = i % 2 == 0;
 	                var row = [];
 	                for (var j = 0; j < 8; j++) {
-	                    row.push(_react2.default.createElement(Tile, { key: i * 8 + j, style: {
-	                            backgroundColor: (flag = !flag) ? 'white' : 'black'
-	                        } }));
+	                    row.push(_react2.default.createElement(Tile, {
+	                        key: i * 8 + j,
+	                        style: { backgroundColor: (flag = !flag) ? 'white' : 'black' },
+	                        tileNum: i * 8 + j
+	                    }));
 	                }
 	                board.push(_react2.default.createElement('div', { className: 'board-row', key: -(i + 1) }, row));
 	            }
@@ -135,6 +167,33 @@
 	        width: boardSize
 	    }
 	}), document.getElementById('container'));
+
+	function determinePiece(tileNumber) {
+	    var namedPiece = function namedPiece(tileNumber) {
+	        switch (tileNumber % 8) {
+	            case 0:case 7:
+	                return 'r';
+	            case 1:case 6:
+	                return 'n';
+	            case 2:case 5:
+	                return 'b';
+	            case 3:
+	                return 'q';
+	            case 4:
+	                return 'k';
+	            default:
+	                return false;
+	        }
+	    };
+
+	    if (tileNumber <= 15) {
+	        return tileNumber <= 7 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
+	    } else if (tileNumber >= 48) {
+	        return tileNumber >= 56 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
+	    } else {
+	        return false;
+	    }
+	}
 
 /***/ },
 /* 1 */
