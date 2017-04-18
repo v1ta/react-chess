@@ -60,8 +60,6 @@
 
 	var _jquery2 = _interopRequireDefault(_jquery);
 
-	__webpack_require__(180);
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -80,13 +78,108 @@
 	    function Piece(props) {
 	        _classCallCheck(this, Piece);
 
-	        return _possibleConstructorReturn(this, (Piece.__proto__ || Object.getPrototypeOf(Piece)).call(this));
+	        var _this = _possibleConstructorReturn(this, (Piece.__proto__ || Object.getPrototypeOf(Piece)).call(this));
+
+	        _this.state = {
+	            rel: { x: 0, y: 0 },
+	            pos: props.pos,
+	            moveSet: props.moveSet
+	        };
+
+	        _this.onMouseDown = _this.onMouseDown.bind(_this);
+	        _this.onMouseMove = _this.onMouseMove.bind(_this);
+	        _this.onMouseUp = _this.onMouseUp.bind(_this);
+	        _this.validMove = _this.validMove.bind(_this);
+
+	        return _this;
 	    }
 
 	    _createClass(Piece, [{
+	        key: 'onMouseDown',
+	        value: function onMouseDown(event) {
+
+	            // Obtain position of click
+	            var ref = this.getRef();
+	            var body = document.body;
+	            var box = ref.getBoundingClientRect();
+
+	            this.setState({
+	                rel: {
+	                    x: event.pageX - (box.left + body.scrollLeft - body.clientLeft),
+	                    y: event.pageY - (box.top + body.scrollTop - body.clientTop)
+	                },
+	                origin: this.state.pos
+	            });
+
+	            (0, _jquery2.default)('.droppableContainer').css({ 'z-index': '2' });
+	            document.addEventListener('mousemove', this.onMouseMove);
+	            document.addEventListener('mouseup', this.onMouseUp);
+
+	            event.preventDefault();
+	        }
+	    }, {
+	        key: 'onMouseMove',
+	        value: function onMouseMove(event) {
+
+	            this.setState({
+	                pos: {
+	                    x: event.pageX - this.state.rel.x,
+	                    y: event.pageY - this.state.rel.y
+	                }
+	            });
+
+	            event.preventDefault();
+	        }
+	    }, {
+	        key: 'onMouseUp',
+	        value: function onMouseUp(event) {
+
+	            if (this.validMove(this.state.pos)) {
+	                this.setState({ pos: this.state.origin });
+	            }
+
+	            (0, _jquery2.default)('.droppableContainer').css({ 'z-index': '0' });
+
+	            document.removeEventListener('mousemove', this.onMouseMove);
+	            document.removeEventListener('mouseup', this.onMouseUp);
+
+	            event.preventDefault();
+	        }
+	    }, {
+	        key: 'validMove',
+	        value: function validMove(pos) {
+
+	            //TODO
+	            var moveSet = this.state.moveSet;
+
+	            if (moveSet.sMove) {}
+
+	            return true;
+	        }
+	    }, {
+	        key: 'getRef',
+	        value: function getRef() {
+	            return _reactDom2.default.findDOMNode(this.refs[this.props.piece]);
+	        }
+	    }, {
 	        key: 'render',
 	        value: function render() {
-	            return _react2.default.createElement('img', { src: 'assets/' + this.props.piece + '.png', style: this.props.style });
+	            return _react2.default.createElement(
+	                'div',
+	                {
+	                    onMouseDown: this.onMouseDown,
+	                    ref: this.props.piece,
+	                    style: {
+	                        position: 'absolute',
+	                        left: this.state.pos.x,
+	                        top: this.state.pos.y,
+	                        zIndex: 1
+	                    } },
+	                _react2.default.createElement('img', {
+	                    src: 'assets/' + this.props.piece + '.png',
+	                    style: this.props.style
+	                })
+	            );
 	        }
 	    }]);
 
@@ -99,23 +192,22 @@
 	    function Tile(props) {
 	        _classCallCheck(this, Tile);
 
-	        return _possibleConstructorReturn(this, (Tile.__proto__ || Object.getPrototypeOf(Tile)).call(this));
+	        var _this2 = _possibleConstructorReturn(this, (Tile.__proto__ || Object.getPrototypeOf(Tile)).call(this));
+
+	        _this2.state = {
+	            piece: determinePiece(props.tileNum),
+	            tileNum: props.tileNum
+	        };
+	        return _this2;
 	    }
 
 	    _createClass(Tile, [{
 	        key: 'render',
 	        value: function render() {
-	            var piece = determinePiece(this.props.tileNum);
 	            return _react2.default.createElement(
 	                'div',
 	                { className: 'tile', style: this.props.style },
-	                piece ? _react2.default.createElement(Piece, {
-	                    style: {
-	                        height: boardSize / 8,
-	                        width: boardSize / 8
-	                    },
-	                    piece: piece
-	                }) : ''
+	                _react2.default.createElement('div', { className: 'droppableContainer', onMouseOver: function onMouseOver() {/* TODO */} })
 	            );
 	        }
 	    }]);
@@ -135,25 +227,54 @@
 	    _createClass(Board, [{
 	        key: 'render',
 	        value: function render() {
-	            var board = [];
+	            var board = [],
+	                pieces = [];
+	            var coords = { x: 0, y: 0 };
 
 	            for (var i = 0; i < 8; i++) {
-	                var flag = i % 2 == 0;
+	                var flag = i % 2 == 0,
+	                    tileNum = void 0,
+	                    piece = void 0;
+
 	                var row = [];
+
 	                for (var j = 0; j < 8; j++) {
+	                    tileNum = i * 8 + j;
 	                    row.push(_react2.default.createElement(Tile, {
-	                        key: i * 8 + j,
+	                        key: tileNum,
 	                        style: { backgroundColor: (flag = !flag) ? 'white' : 'black' },
-	                        tileNum: i * 8 + j
+	                        tileNum: tileNum
 	                    }));
+
+	                    piece = determinePiece(tileNum);
+	                    if (piece) {
+	                        pieces.push(_react2.default.createElement(Piece, {
+	                            key: tileNum,
+	                            style: {
+	                                height: boardSize / 8,
+	                                width: boardSize / 8
+	                            },
+	                            piece: piece,
+	                            onMove: this.move,
+	                            pos: {
+	                                x: coords.x,
+	                                y: coords.y
+	                            },
+	                            moveSet: getMoveSet(piece)
+	                        }));
+	                    }
+	                    coords.x += boardSize / 8;
 	                }
 	                board.push(_react2.default.createElement('div', { className: 'board-row', key: -(i + 1) }, row));
+	                coords.y += boardSize / 8;
+	                coords.x = 0;
 	            }
 
 	            return _react2.default.createElement(
 	                'div',
 	                { className: 'board', style: this.props.style },
-	                board
+	                board,
+	                pieces
 	            );
 	        }
 	    }]);
@@ -169,6 +290,8 @@
 	}), document.getElementById('container'));
 
 	function determinePiece(tileNumber) {
+
+	    // Determine type of piece
 	    var namedPiece = function namedPiece(tileNumber) {
 	        switch (tileNumber % 8) {
 	            case 0:case 7:
@@ -186,12 +309,53 @@
 	        }
 	    };
 
+	    // Determine piece faction
 	    if (tileNumber <= 15) {
 	        return tileNumber <= 7 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
 	    } else if (tileNumber >= 48) {
 	        return tileNumber >= 56 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
 	    } else {
 	        return false;
+	    }
+	}
+
+	function getMoveSet(piece) {
+
+	    switch (piece[5]) {
+	        case 'p':
+	            return {
+	                moves: [[1, 0]],
+	                sMoves: [[-1, -1], [-1, 1]],
+	                numMoves: 1,
+	                sMove: true
+	            };
+	        case 'b':
+	            return {
+	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1]],
+	                numMoves: 7
+	            };
+	        case 'k':
+	            return {
+	                moves: [[1, 1], [-1, 1], [-1,, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
+	                sMoves: [[0, 1], [0, -1]],
+	                numMoves: 1,
+	                sMove: true
+	            };
+	        case 'n':
+	            return {
+	                moves: [[2, 1], [-2, 1], [-2, -1], [2, -1], [1, 2], [-1, 2], [-1, -2], [1, -2]],
+	                numMoves: 1
+	            };
+	        case 'q':
+	            return {
+	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
+	                numMoves: 7
+	            };
+	        case 'r':
+	            return {
+	                moves: [[1, 0], [0, 1], [-1, 0], [0, -1]],
+	                numMoves: 7
+	            };
 	    }
 	}
 
@@ -31479,75 +31643,6 @@
 			module.webpackPolyfill = 1;
 		}
 		return module;
-	};
-
-/***/ },
-/* 180 */
-/***/ function(module, exports, __webpack_require__) {
-
-	exports = module.exports = __webpack_require__(181)();
-	// imports
-
-
-	// module
-	exports.push([module.id, ".tile {\n    position: relative;\n    display: inline-block;\n    width: 12.5%;\n    height: 100%;\n    clear: both;\n}\n\n.board {\n    position: relative;\n    min-height: 500px;\n    border-style: solid;\n    border-color: 'black';\n}\n\n.board-row {\n    height: 12.5%\n}", ""]);
-
-	// exports
-
-
-/***/ },
-/* 181 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	/*
-		MIT License http://www.opensource.org/licenses/mit-license.php
-		Author Tobias Koppers @sokra
-	*/
-	// css base code, injected by the css-loader
-	module.exports = function () {
-		var list = [];
-
-		// return the list of modules as css string
-		list.toString = function toString() {
-			var result = [];
-			for (var i = 0; i < this.length; i++) {
-				var item = this[i];
-				if (item[2]) {
-					result.push("@media " + item[2] + "{" + item[1] + "}");
-				} else {
-					result.push(item[1]);
-				}
-			}
-			return result.join("");
-		};
-
-		// import a list of modules into the list
-		list.i = function (modules, mediaQuery) {
-			if (typeof modules === "string") modules = [[null, modules, ""]];
-			var alreadyImportedModules = {};
-			for (var i = 0; i < this.length; i++) {
-				var id = this[i][0];
-				if (typeof id === "number") alreadyImportedModules[id] = true;
-			}
-			for (i = 0; i < modules.length; i++) {
-				var item = modules[i];
-				// skip already imported module
-				// this implementation is not 100% perfect for weird media query combinations
-				//  when a module is imported multiple times with different media queries.
-				//  I hope this will never occur (Hey this way we have smaller bundles)
-				if (typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
-					if (mediaQuery && !item[2]) {
-						item[2] = mediaQuery;
-					} else if (mediaQuery) {
-						item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
-					}
-					list.push(item);
-				}
-			}
-		};
-		return list;
 	};
 
 /***/ }
