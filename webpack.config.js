@@ -1,21 +1,28 @@
 var webpack = require('webpack'),
     path = require('path'),
-    BUILD_DIR = path.resolve(__dirname, 'src/client/public'),
-    APP_DIR = path.resolve(__dirname, 'src/client/app'),
-    STYLE_DIR = path.resolve(__dirname, 'src/client/css'),
-    ASSET_DIR = path.resolve(__dirname, 'src/client/assets'),
+    BUILD_DIR = path.resolve(__dirname, 'src/js'),
+    APP_DIR = path.resolve(__dirname, 'dev/js'),
+    STYLE_DIR = path.resolve(__dirname, 'dev/css'),
+    ASSET_DIR = path.resolve(__dirname, 'dev/assets'),
     config = {
+        devServer: {
+            inline: true,
+            contentBase: './src',
+            port: 3000
+        },
+        devtool: 'cheap-module-eval-source-map',
         entry: APP_DIR + '/index.js',
         output: {
             path: BUILD_DIR,
-            filename: 'bundle.js'
-        }, 
+            filename: 'bundle.min.js'
+        },
         module: {
             loaders: [
                 {
                     test: /.js/,
                     incldue: APP_DIR,
-                    loader: 'babel'
+                    loader: 'babel',
+                    exclude: /node_modules/
                 },
                 {
                     test: /\.css/,
@@ -31,7 +38,10 @@ var webpack = require('webpack'),
                     ]
                 }
             ]
-        }
+        },
+        plugins: [
+            new webpack.optimize.OccurrenceOrderPlugin()
+        ]
     };
 
 module.exports = config;
