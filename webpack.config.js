@@ -1,47 +1,38 @@
 var webpack = require('webpack'),
     path = require('path'),
-    BUILD_DIR = path.resolve(__dirname, 'src/js'),
-    APP_DIR = path.resolve(__dirname, 'dev/js'),
-    STYLE_DIR = path.resolve(__dirname, 'dev/css'),
-    ASSET_DIR = path.resolve(__dirname, 'dev/assets'),
+    BUILD_DIR = path.resolve(__dirname, 'src/public'),
+    APP_DIR = path.resolve(__dirname, 'src/js'),
+    STYLE_DIR = path.resolve(__dirname, 'src/scss'),
+    ASSET_DIR = path.resolve(__dirname, 'src/assets'),
     config = {
-        devServer: {
-            inline: true,
-            contentBase: './src',
-            port: 3000
-        },
-        devtool: 'cheap-module-eval-source-map',
         entry: APP_DIR + '/index.js',
         output: {
             path: BUILD_DIR,
-            filename: 'bundle.min.js'
+            filename: 'bundle.js'
         },
         module: {
             loaders: [
                 {
                     test: /.js/,
-                    incldue: APP_DIR,
+                    include: APP_DIR,
                     loader: 'babel',
                     exclude: /node_modules/
                 },
                 {
-                    test: /\.css/,
+                    test: /\.scss/,
                     include: STYLE_DIR,
-                    loaders: ['css']
+                    loader: 'style-loader!css-loader!sass-loader'
                 },
                 {
                     test: /\.(jpe?g|png|gif|svg)$/i,
-                    incldue: ASSET_DIR,
+                    include: ASSET_DIR,
                     loaders: [
                         'file?hash=sha512&digest=hex&name=[hash].[ext]',
                         'image-webpack?bypassOnDebug&optimizationLevel=7&interlaced=false'
                     ]
                 }
             ]
-        },
-        plugins: [
-            new webpack.optimize.OccurrenceOrderPlugin()
-        ]
+        }
     };
 
 module.exports = config;

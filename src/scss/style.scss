@@ -1,0 +1,26 @@
+.tile {
+    position: relative;
+    display: inline-block;
+    width: 12.5%;
+    height: 100%;
+    clear: both;
+}
+
+.board {
+    position: relative;
+    min-height: 500px;
+    border-style: solid;
+    border-color: 'black';
+}
+
+.board-row {
+    height: 12.5%
+}
+
+.droppableContainer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    z-index: -1;
+}
