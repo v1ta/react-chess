@@ -27,17 +27,17 @@ function determinePiece(tileNumber) {
         return {
             type: type,
             moveSet: getMoveSet(type),
-            x: 0,
-            y: 0
+            x: -1,
+            y: -1
         }
     }
 
     // Determine piece faction
     if (tileNumber <= 15) {
-        let type = tileNumber <=7 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
+        let type = tileNumber <=7 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
         return createPiece(type)
     } else if (tileNumber >= 48) {
-        let type = tileNumber >= 56 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
+        let type = tileNumber >= 56 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
         return createPiece(type)
     } else {
         return false;
@@ -48,12 +48,18 @@ function getMoveSet(piece) {
 
     switch(piece[5]) {
         case 'p':
-            return {
+            let moveSet = {
                 moves: [[1, 0]],
-                sMoves: [[-1, -1], [-1, 1]],
+                sMoves: [[1, -1], [1, 1]],
                 numMoves: 1,
                 sMove: true,
             }
+            if (/black/.test(piece)) {
+                moveSet.moves = [[-1, 0]];
+                moveSet.sMoves = [[-1, -1], [-1, 1]];
+            }
+            return moveSet;
+
         case 'b':
             return {
                 moves: [[1, 1], [-1, 1], [-1, -1], [1, -1]],
@@ -61,7 +67,7 @@ function getMoveSet(piece) {
             }
         case 'k':
             return {
-                moves: [[1, 1], [-1, 1], [-1, ,-1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
+                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
                 sMoves: [[0, 1], [0, -1]],
                 numMoves: 1,
                 sMove: true

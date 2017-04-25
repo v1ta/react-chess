@@ -60,9 +60,9 @@
 
 	var _allReducers2 = _interopRequireDefault(_allReducers);
 
-	var _reactRedux = __webpack_require__(207);
+	var _reactRedux = __webpack_require__(206);
 
-	var _board = __webpack_require__(218);
+	var _board = __webpack_require__(217);
 
 	var _board2 = _interopRequireDefault(_board);
 
@@ -22850,15 +22850,10 @@
 
 	var _boardReducer2 = _interopRequireDefault(_boardReducer);
 
-	var _gameplayReducer = __webpack_require__(206);
-
-	var _gameplayReducer2 = _interopRequireDefault(_gameplayReducer);
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	var allReducers = (0, _redux.combineReducers)({
-	    board: _boardReducer2.default,
-	    gameplay: _gameplayReducer2.default
+	    board: _boardReducer2.default
 	});
 
 	exports.default = allReducers;
@@ -22875,25 +22870,138 @@
 
 	var _boardUtils = __webpack_require__(205);
 
+	var board = {
+	    tiles: {},
+	    pieces: {},
+	    activePiece: {},
+	    moveHistory: [],
+	    boardSize: null,
+	    currentPlayer: 'white'
+	};
+
+	var yCoordDeadPiece = 0;
+
 	exports.default = function () {
-	    var board = {};
+	    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+	    var action = arguments[1];
 
-	    for (var i = 0; i < 8; i++) {
-	        var tileColorFlag = i % 2 == 0;
 
-	        for (var j = 0; j < 8; j++) {
-	            var cellId = String.fromCharCode(97 + j) + (i + 1),
-	                tileNumber = i * 8 + j;
+	    if (Object.keys(board.tiles).length === 0) {
+	        loadDefaultBoard();
+	    }
 
-	            board[cellId] = {
-	                backgroundColor: (tileColorFlag = !tileColorFlag) ? 'white' : 'black',
-	                piece: (0, _boardUtils.determinePiece)(tileNumber)
-	            };
-	        }
+	    switch (action.type) {
+	        case 'MOVE_PIECE':
+	            var piece = board.activePiece,
+	                tile = action.payload.tile,
+	                cell = action.payload.cell,
+	                refPiece = board.pieces[piece.type + piece.startingTile];
+
+	            if (validMove(tile, cell, refPiece)) {
+	                board.currentPlayer = board.currentPlayer === 'white' ? 'black' : 'white';
+	            }
+	            break;
+	        case 'ACTIVE_PIECE':
+	            board.activePiece = action.payload;
+	            break;
 	    }
 
 	    return board;
 	};
+
+	function loadDefaultBoard() {
+	    for (var i = 7; i >= 0; i--) {
+	        var tileColorFlag = i % 2 == 0;
+
+	        for (var j = 0; j < 8; j++) {
+	            var cellId = String.fromCharCode(97 + j) + (i + 1),
+	                tileNumber = i * 8 + j,
+	                piece = (0, _boardUtils.determinePiece)(tileNumber);
+
+	            board.tiles[cellId] = {
+	                backgroundColor: (tileColorFlag = !tileColorFlag) ? 'white' : 'black',
+	                piece: piece ? piece.type + cellId : false
+	            };
+
+	            if (piece) {
+	                board.pieces[piece.type + cellId] = piece;
+	            }
+	        }
+	    }
+	}
+
+	function validMove(tile, cell, piece) {
+	    // TODO add castling case
+	    if (tile.piece && new RegExp(board.currentPlayer).test(tile.piece)) {
+	        return false;
+	    }
+
+	    var moveSet = piece.moveSet,
+	        destColumn = cell[0].charCodeAt() - 97,
+	        destRow = Number(cell[1]),
+	        currColumn = piece.currentTile[0].charCodeAt() - 97,
+	        currRow = Number(piece.currentTile[1]),
+	        numMoves = moveSet.numMoves;
+
+	    for (var i = 0; i < moveSet.moves.length; i++) {
+	        var moveVector = moveSet.moves[i];
+	        for (var j = 1; j <= numMoves; j++) {
+	            var rowVector = moveVector[0] * j,
+	                colVector = moveVector[1] * j;
+
+	            if (colVector + currColumn === destColumn && rowVector + currRow === destRow) {
+
+	                if (tile.piece) {
+	                    var enemyPiece = board.pieces[tile.piece];
+	                    enemyPiece.alive = false;
+	                    enemyPiece.x = board.boardSize;
+	                    enemyPiece.y = yCoordDeadPiece;
+	                    yCoordDeadPiece += 20;
+	                }
+
+	                // Update coordinates
+	                piece.x = tile.x;
+	                piece.y = tile.y;
+
+	                // Update tiles
+	                board.tiles[cell].piece = piece.type + piece.startingTile;
+	                board.tiles[piece.currentTile].piece = false;
+
+	                // Update piece
+	                piece.currentTile = cell;
+
+	                return true;
+	            } else if (!containsPiece(resolveBoardCell(colVector + currColumn, rowVector + currRow))) {
+	                break;
+	            }
+	        }
+	    }
+	    return false;
+	}
+
+	function resolveBoardCell(colNumber, rowNumber) {
+	    return String.fromCharCode(97 + colNumber) + rowNumber;
+	}
+
+	function containsPiece(boardCell) {
+	    var validBoardCell = function validBoardCell(boardCell) {
+	        var row = Number(boardCell.substr(1));
+
+	        if (!/[a-h]/.test(boardCell[0])) {
+	            return false;
+	        } else if (row < 1 || row > 8) {
+	            return false;
+	        } else {
+	            return true;
+	        }
+	    };
+
+	    if (!validBoardCell(boardCell)) {
+	        return false;
+	    }
+
+	    return !board.tiles[boardCell].piece;
+	}
 
 /***/ }),
 /* 205 */
@@ -22933,17 +23041,17 @@
 	        return {
 	            type: type,
 	            moveSet: getMoveSet(type),
-	            x: 0,
-	            y: 0
+	            x: -1,
+	            y: -1
 	        };
 	    };
 
 	    // Determine piece faction
 	    if (tileNumber <= 15) {
-	        var type = tileNumber <= 7 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
+	        var type = tileNumber <= 7 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
 	        return createPiece(type);
 	    } else if (tileNumber >= 48) {
-	        var _type = tileNumber >= 56 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
+	        var _type = tileNumber >= 56 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
 	        return createPiece(_type);
 	    } else {
 	        return false;
@@ -22954,12 +23062,18 @@
 
 	    switch (piece[5]) {
 	        case 'p':
-	            return {
+	            var moveSet = {
 	                moves: [[1, 0]],
-	                sMoves: [[-1, -1], [-1, 1]],
+	                sMoves: [[1, -1], [1, 1]],
 	                numMoves: 1,
 	                sMove: true
 	            };
+	            if (/black/.test(piece)) {
+	                moveSet.moves = [[-1, 0]];
+	                moveSet.sMoves = [[-1, -1], [-1, 1]];
+	            }
+	            return moveSet;
+
 	        case 'b':
 	            return {
 	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1]],
@@ -22967,7 +23081,7 @@
 	            };
 	        case 'k':
 	            return {
-	                moves: [[1, 1], [-1, 1], [-1,, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
+	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
 	                sMoves: [[0, 1], [0, -1]],
 	                numMoves: 1,
 	                sMove: true
@@ -22995,28 +23109,6 @@
 
 /***/ }),
 /* 206 */
-/***/ (function(module, exports) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-
-	exports.default = function () {
-	    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-	    var action = arguments[1];
-
-	    switch (action.type) {
-	        case 'MOVE_PIECE':
-	            // !TODO
-	            break;
-	    }
-	    return state;
-	};
-
-/***/ }),
-/* 207 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23024,11 +23116,11 @@
 	exports.__esModule = true;
 	exports.connect = exports.Provider = undefined;
 
-	var _Provider = __webpack_require__(208);
+	var _Provider = __webpack_require__(207);
 
 	var _Provider2 = _interopRequireDefault(_Provider);
 
-	var _connect = __webpack_require__(213);
+	var _connect = __webpack_require__(212);
 
 	var _connect2 = _interopRequireDefault(_connect);
 
@@ -23038,7 +23130,7 @@
 	exports.connect = _connect2["default"];
 
 /***/ }),
-/* 208 */
+/* 207 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
@@ -23048,15 +23140,15 @@
 
 	var _react = __webpack_require__(1);
 
-	var _propTypes = __webpack_require__(209);
+	var _propTypes = __webpack_require__(208);
 
 	var _propTypes2 = _interopRequireDefault(_propTypes);
 
-	var _storeShape = __webpack_require__(211);
+	var _storeShape = __webpack_require__(210);
 
 	var _storeShape2 = _interopRequireDefault(_storeShape);
 
-	var _warning = __webpack_require__(212);
+	var _warning = __webpack_require__(211);
 
 	var _warning2 = _interopRequireDefault(_warning);
 
@@ -23126,7 +23218,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ }),
-/* 209 */
+/* 208 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -23157,13 +23249,13 @@
 	} else {
 	  // By explicitly using `prop-types` you are opting into new production behavior.
 	  // http://fb.me/prop-types-in-prod
-	  module.exports = __webpack_require__(210)();
+	  module.exports = __webpack_require__(209)();
 	}
 
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ }),
-/* 210 */
+/* 209 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/**
@@ -23223,14 +23315,14 @@
 
 
 /***/ }),
-/* 211 */
+/* 210 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _propTypes = __webpack_require__(209);
+	var _propTypes = __webpack_require__(208);
 
 	var _propTypes2 = _interopRequireDefault(_propTypes);
 
@@ -23243,7 +23335,7 @@
 	});
 
 /***/ }),
-/* 212 */
+/* 211 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -23273,7 +23365,7 @@
 	}
 
 /***/ }),
-/* 213 */
+/* 212 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
@@ -23286,19 +23378,19 @@
 
 	var _react = __webpack_require__(1);
 
-	var _storeShape = __webpack_require__(211);
+	var _storeShape = __webpack_require__(210);
 
 	var _storeShape2 = _interopRequireDefault(_storeShape);
 
-	var _shallowEqual = __webpack_require__(214);
+	var _shallowEqual = __webpack_require__(213);
 
 	var _shallowEqual2 = _interopRequireDefault(_shallowEqual);
 
-	var _wrapActionCreators = __webpack_require__(215);
+	var _wrapActionCreators = __webpack_require__(214);
 
 	var _wrapActionCreators2 = _interopRequireDefault(_wrapActionCreators);
 
-	var _warning = __webpack_require__(212);
+	var _warning = __webpack_require__(211);
 
 	var _warning2 = _interopRequireDefault(_warning);
 
@@ -23306,11 +23398,11 @@
 
 	var _isPlainObject2 = _interopRequireDefault(_isPlainObject);
 
-	var _hoistNonReactStatics = __webpack_require__(216);
+	var _hoistNonReactStatics = __webpack_require__(215);
 
 	var _hoistNonReactStatics2 = _interopRequireDefault(_hoistNonReactStatics);
 
-	var _invariant = __webpack_require__(217);
+	var _invariant = __webpack_require__(216);
 
 	var _invariant2 = _interopRequireDefault(_invariant);
 
@@ -23674,7 +23766,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ }),
-/* 214 */
+/* 213 */
 /***/ (function(module, exports) {
 
 	"use strict";
@@ -23705,7 +23797,7 @@
 	}
 
 /***/ }),
-/* 215 */
+/* 214 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23722,7 +23814,7 @@
 	}
 
 /***/ }),
-/* 216 */
+/* 215 */
 /***/ (function(module, exports) {
 
 	/**
@@ -23778,7 +23870,7 @@
 
 
 /***/ }),
-/* 217 */
+/* 216 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -23836,7 +23928,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ }),
-/* 218 */
+/* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23851,25 +23943,25 @@
 
 	var _react2 = _interopRequireDefault(_react);
 
-	var _reactRedux = __webpack_require__(207);
+	var _reactRedux = __webpack_require__(206);
 
 	var _reactDom = __webpack_require__(36);
 
 	var _reactDom2 = _interopRequireDefault(_reactDom);
 
-	var _gameplay = __webpack_require__(219);
+	var _gameplay = __webpack_require__(218);
 
 	var _redux = __webpack_require__(182);
 
-	var _Tile = __webpack_require__(220);
+	var _Tile = __webpack_require__(219);
 
 	var _Tile2 = _interopRequireDefault(_Tile);
 
-	var _Piece = __webpack_require__(221);
+	var _Piece = __webpack_require__(220);
 
 	var _Piece2 = _interopRequireDefault(_Piece);
 
-	var _jquery = __webpack_require__(222);
+	var _jquery = __webpack_require__(221);
 
 	var _jquery2 = _interopRequireDefault(_jquery);
 
@@ -23881,7 +23973,7 @@
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	__webpack_require__(223);
+	__webpack_require__(222);
 
 	var width = (0, _jquery2.default)(document).width(),
 	    height = (0, _jquery2.default)(document).height(),
@@ -23890,13 +23982,10 @@
 	var Board = function (_Component) {
 	    _inherits(Board, _Component);
 
-	    function Board(props) {
+	    function Board() {
 	        _classCallCheck(this, Board);
 
-	        var _this = _possibleConstructorReturn(this, (Board.__proto__ || Object.getPrototypeOf(Board)).call(this, props));
-
-	        _this.board = _this.createBoard();
-	        return _this;
+	        return _possibleConstructorReturn(this, (Board.__proto__ || Object.getPrototypeOf(Board)).apply(this, arguments));
 	    }
 
 	    _createClass(Board, [{
@@ -23908,41 +23997,46 @@
 	                tiles: [],
 	                pieces: []
 	            };
+
 	            var x = 0,
 	                y = 0,
 	                i = 0,
 	                row = [];
 
-	            var _loop = function _loop() {
-	                var tile = _this2.props.board[cell];
+	            this.props.board.boardSize = boardSize;
 
+	            var _loop = function _loop() {
+	                var tile = _this2.props.board.tiles[cell],
+	                    cellId = cell;
 	                tile.x = x;
 	                tile.y = y;
 
 	                row.push(_react2.default.createElement(_Tile2.default, {
-	                    key: cell,
+	                    key: cellId,
 	                    style: { backgroundColor: tile.backgroundColor },
 	                    dropPiece: function dropPiece() {
-	                        return _this2.props.dropPiece(tile);
+	                        return _this2.props.dropPiece(tile, cellId);
 	                    }
 	                }));
 
 	                if (tile.piece) {
-	                    var type = tile.piece.type;
-
-	                    tile.piece.x = x;
-	                    tile.piece.y = y;
+	                    var pieceKey = tile.piece,
+	                        piece = _this2.props.board.pieces[pieceKey];
+	                    piece.x = x;
+	                    piece.y = y;
+	                    piece.startingTile = cell;
+	                    piece.currentTile = cell;
+	                    piece.alive = true;
 
 	                    board.pieces.push(_react2.default.createElement(_Piece2.default, {
-	                        key: type + cell,
+	                        key: pieceKey,
 	                        style: {
 	                            height: boardSize / 8,
 	                            width: boardSize / 8
 	                        },
-	                        piece: type,
-	                        pos: {
-	                            x: tile.piece.x,
-	                            y: tile.piece.y
+	                        piece: piece,
+	                        activePiece: function activePiece() {
+	                            return _this2.props.activePiece(piece);
 	                        }
 	                    }));
 	                }
@@ -23957,27 +24051,20 @@
 	                }
 	            };
 
-	            for (var cell in this.props.board) {
+	            for (var cell in this.props.board.tiles) {
 	                _loop();
 	            }
-
-	            board.tiles = board.tiles.reverse();
-
 	            return board;
-	        }
-	    }, {
-	        key: 'dropPiece',
-	        value: function dropPiece() {
-	            // TODO
 	        }
 	    }, {
 	        key: 'render',
 	        value: function render() {
+	            var gameBoard = this.createBoard();
 	            return _react2.default.createElement(
 	                'div',
 	                { className: 'board', style: { width: boardSize, height: boardSize } },
-	                this.board.tiles,
-	                this.board.pieces
+	                gameBoard.tiles,
+	                gameBoard.pieces
 	            );
 	        }
 	    }]);
@@ -23992,13 +24079,16 @@
 	}
 
 	function matchDispatchToProps(dispatch) {
-	    return (0, _redux.bindActionCreators)({ dropPiece: _gameplay.dropPiece }, dispatch);
+	    return (0, _redux.bindActionCreators)({
+	        dropPiece: _gameplay.dropPiece,
+	        activePiece: _gameplay.activePiece
+	    }, dispatch);
 	}
 
 	exports.default = (0, _reactRedux.connect)(mapStateToProps, matchDispatchToProps)(Board);
 
 /***/ }),
-/* 219 */
+/* 218 */
 /***/ (function(module, exports) {
 
 	'use strict';
@@ -24006,17 +24096,28 @@
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	function dropPiece(tile) {
+	function dropPiece(tile, cell) {
 	    return {
 	        type: 'MOVE_PIECE',
-	        payload: tile
+	        payload: {
+	            cell: cell,
+	            tile: tile
+	        }
 	    };
 	};
 
+	function activePiece(piece) {
+	    return {
+	        type: 'ACTIVE_PIECE',
+	        payload: piece
+	    };
+	}
+
 	exports.dropPiece = dropPiece;
+	exports.activePiece = activePiece;
 
 /***/ }),
-/* 220 */
+/* 219 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -24042,10 +24143,10 @@
 	var Tile = function (_Component) {
 	    _inherits(Tile, _Component);
 
-	    function Tile(props) {
+	    function Tile() {
 	        _classCallCheck(this, Tile);
 
-	        return _possibleConstructorReturn(this, (Tile.__proto__ || Object.getPrototypeOf(Tile)).call(this, props));
+	        return _possibleConstructorReturn(this, (Tile.__proto__ || Object.getPrototypeOf(Tile)).apply(this, arguments));
 	    }
 
 	    _createClass(Tile, [{
@@ -24065,7 +24166,7 @@
 	exports.default = Tile;
 
 /***/ }),
-/* 221 */
+/* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -24084,7 +24185,9 @@
 
 	var _reactDom2 = _interopRequireDefault(_reactDom);
 
-	var _jquery = __webpack_require__(222);
+	var _reactRedux = __webpack_require__(206);
+
+	var _jquery = __webpack_require__(221);
 
 	var _jquery2 = _interopRequireDefault(_jquery);
 
@@ -24106,7 +24209,9 @@
 
 	        _this.state = {
 	            rel: { x: 0, y: 0 },
-	            pos: props.pos,
+	            pos: {
+	                x: _this.props.piece.x,
+	                y: _this.props.piece.y },
 	            dragging: false
 	        };
 
@@ -24120,11 +24225,17 @@
 	    _createClass(Piece, [{
 	        key: 'onMouseDown',
 	        value: function onMouseDown(event) {
+	            if (!new RegExp(this.props.board.currentPlayer).test(this.props.piece.type)) {
+	                return false;
+	            }
 
 	            // Obtain position of click
 	            var ref = this.getRef(),
 	                body = document.body,
 	                box = ref.getBoundingClientRect();
+
+	            // Inform store which piece is being moved
+	            this.props.activePiece();
 
 	            // Record current location and cursor location
 	            this.setState({
@@ -24132,7 +24243,6 @@
 	                    x: event.pageX - (box.left + body.scrollLeft - body.clientLeft),
 	                    y: event.pageY - (box.top + body.scrollTop - body.clientTop)
 	                },
-	                origin: this.state.pos,
 	                dragging: true
 	            });
 
@@ -24146,7 +24256,6 @@
 	    }, {
 	        key: 'onMouseMove',
 	        value: function onMouseMove(event) {
-
 	            this.setState({
 	                pos: {
 	                    x: event.pageX - this.state.rel.x,
@@ -24159,14 +24268,11 @@
 	    }, {
 	        key: 'onMouseUp',
 	        value: function onMouseUp(event) {
-
 	            this.setState({
-	                pos: this.state.origin,
 	                dragging: false
 	            });
 
 	            (0, _jquery2.default)('.droppableContainer').css({ 'z-index': '-1' });
-
 	            document.removeEventListener('mousemove', this.onMouseMove);
 	            document.removeEventListener('mouseup', this.validMove);
 
@@ -24175,7 +24281,7 @@
 	    }, {
 	        key: 'getRef',
 	        value: function getRef() {
-	            return _reactDom2.default.findDOMNode(this.refs[this.props.piece]);
+	            return _reactDom2.default.findDOMNode(this.refs[this.props.piece.type]);
 	        }
 	    }, {
 	        key: 'render',
@@ -24187,15 +24293,15 @@
 	                x = this.state.pos.x;
 	                y = this.state.pos.y;
 	            } else {
-	                x = this.props.pos.x;
-	                y = this.props.pos.y;
+	                x = this.props.piece.x;
+	                y = this.props.piece.y;
 	            }
 
 	            return _react2.default.createElement(
 	                'div',
 	                {
 	                    onMouseDown: this.onMouseDown,
-	                    ref: this.props.piece,
+	                    ref: this.props.piece.type,
 	                    style: {
 	                        position: 'absolute',
 	                        left: x,
@@ -24203,7 +24309,7 @@
 	                        zIndex: 1
 	                    } },
 	                _react2.default.createElement('img', {
-	                    src: 'assets/' + this.props.piece + '.png',
+	                    src: 'assets/' + this.props.piece.type + '.png',
 	                    style: this.props.style
 	                })
 	            );
@@ -24213,10 +24319,17 @@
 	    return Piece;
 	}(_react.Component);
 
-	exports.default = Piece;
+	function mapStateToProps(state, ownProps) {
+	    return {
+	        board: state.board,
+	        currPiece: state.board.pieces[ownProps.piece.type + ownProps.piece.startingTile]
+	    };
+	}
+
+	exports.default = (0, _reactRedux.connect)(mapStateToProps)(Piece);
 
 /***/ }),
-/* 222 */
+/* 221 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -34475,16 +34588,16 @@
 
 
 /***/ }),
-/* 223 */
+/* 222 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(224);
+	var content = __webpack_require__(223);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(226)(content, {});
+	var update = __webpack_require__(225)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -34501,10 +34614,10 @@
 	}
 
 /***/ }),
-/* 224 */
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(225)();
+	exports = module.exports = __webpack_require__(224)();
 	// imports
 
 
@@ -34515,7 +34628,7 @@
 
 
 /***/ }),
-/* 225 */
+/* 224 */
 /***/ (function(module, exports) {
 
 	/*
@@ -34571,7 +34684,7 @@
 
 
 /***/ }),
-/* 226 */
+/* 225 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/*

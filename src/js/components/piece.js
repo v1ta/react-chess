@@ -1,14 +1,16 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
+import {connect} from 'react-redux';
 import $ from 'jquery';
 
 class Piece extends Component {
     constructor(props){
         super(props);
-
         this.state = {
             rel: {x: 0, y: 0},
-            pos: props.pos,
+            pos: {
+                x: this.props.piece.x,
+                y: this.props.piece.y},
             dragging: false
         }
 
@@ -19,11 +21,17 @@ class Piece extends Component {
     }
 
     onMouseDown(event) {
+        if (!new RegExp(this.props.board.currentPlayer).test(this.props.piece.type)) {
+            return false;
+        }
 
         // Obtain position of click
         let ref = this.getRef(),
             body = document.body,
             box = ref.getBoundingClientRect();
+
+        // Inform store which piece is being moved
+        this.props.activePiece();
 
         // Record current location and cursor location
         this.setState({
@@ -31,7 +39,6 @@ class Piece extends Component {
                 x: event.pageX - (box.left + body.scrollLeft - body.clientLeft),
                 y: event.pageY - (box.top + body.scrollTop - body.clientTop)
             },
-            origin: this.state.pos,
             dragging: true
         });
 
@@ -44,7 +51,6 @@ class Piece extends Component {
     }
 
     onMouseMove(event){
-
         this.setState({
             pos:{
                 x: event.pageX - this.state.rel.x,
@@ -56,14 +62,11 @@ class Piece extends Component {
     }
 
     onMouseUp(event) {
-
         this.setState({
-            pos: this.state.origin,
             dragging: false
         });
 
         $('.droppableContainer').css({'z-index': '-1'});
-
         document.removeEventListener('mousemove', this.onMouseMove);
         document.removeEventListener('mouseup', this.validMove);
 
@@ -71,7 +74,7 @@ class Piece extends Component {
     }
 
     getRef(){
-        return ReactDOM.findDOMNode(this.refs[this.props.piece]);
+        return ReactDOM.findDOMNode(this.refs[this.props.piece.type]);
     }
 
     render(){
@@ -81,14 +84,14 @@ class Piece extends Component {
             x = this.state.pos.x;
             y = this.state.pos.y;
         } else {
-            x = this.props.pos.x;
-            y = this.props.pos.y;
+            x = this.props.piece.x;
+            y = this.props.piece.y;
         }
 
         return(
             <div
                 onMouseDown={this.onMouseDown}
-                ref={this.props.piece}
+                ref={this.props.piece.type}
                 style={{
                     position: 'absolute',
                     left: x,
@@ -96,7 +99,7 @@ class Piece extends Component {
                     zIndex: 1
                 }}>
                 <img
-                    src={'assets/' + this.props.piece + '.png'}
+                    src={'assets/' + this.props.piece.type + '.png'}
                     style={this.props.style}
                 />
             </div>
@@ -104,4 +107,11 @@ class Piece extends Component {
     }
 }
 
-export default Piece;
+function mapStateToProps(state, ownProps) {
+    return {
+        board: state.board,
+        currPiece: state.board.pieces[ownProps.piece.type + ownProps.piece.startingTile]
+    }
+}
+
+export default connect(mapStateToProps)(Piece);

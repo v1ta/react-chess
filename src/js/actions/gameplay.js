@@ -1,8 +1,18 @@
-function dropPiece(tile) {
+function dropPiece(tile, cell) {
     return {
         type: 'MOVE_PIECE',
-        payload: tile
+        payload: {
+            cell: cell,
+            tile: tile
+        }
     }
 };
 
-export {dropPiece}
+function activePiece(piece) {
+    return {
+        type: 'ACTIVE_PIECE',
+        payload: piece
+    }
+}
+
+export {dropPiece, activePiece}
