@@ -1,16 +1,21 @@
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
+import {getPiece, currentPlayer} from '../reducers/board';
+import {activePiece} from '../actions/gameplay';
+import {bindActionCreators} from 'redux';
 import $ from 'jquery';
 
 class Piece extends Component {
     constructor(props){
         super(props);
+
         this.state = {
             rel: {x: 0, y: 0},
             pos: {
-                x: this.props.piece.x,
-                y: this.props.piece.y},
+                x: props.piece.x,
+                y: props.piece.y
+            },
             dragging: false
         }
 
@@ -21,7 +26,8 @@ class Piece extends Component {
     }
 
     onMouseDown(event) {
-        if (!new RegExp(this.props.board.currentPlayer).test(this.props.piece.type)) {
+
+        if (!new RegExp(this.props.currentPlayer).test(this.props.piece.type)) {
             return false;
         }
 
@@ -31,7 +37,7 @@ class Piece extends Component {
             box = ref.getBoundingClientRect();
 
         // Inform store which piece is being moved
-        this.props.activePiece();
+        this.props.activePiece(this.props.piece);
 
         // Record current location and cursor location
         this.setState({
@@ -51,6 +57,7 @@ class Piece extends Component {
     }
 
     onMouseMove(event){
+
         this.setState({
             pos:{
                 x: event.pageX - this.state.rel.x,
@@ -62,6 +69,7 @@ class Piece extends Component {
     }
 
     onMouseUp(event) {
+
         this.setState({
             dragging: false
         });
@@ -78,6 +86,7 @@ class Piece extends Component {
     }
 
     render(){
+
         let x, y;
 
         if (this.state.dragging) {
@@ -107,11 +116,17 @@ class Piece extends Component {
     }
 }
 
-function mapStateToProps(state, ownProps) {
+const matchDispatchToProps = (dispatch) => {
+    return bindActionCreators({
+        activePiece: activePiece
+    }, dispatch);
+}
+
+const mapStateToProps = (state, ownProps) => {
     return {
-        board: state.board,
-        currPiece: state.board.pieces[ownProps.piece.type + ownProps.piece.startingTile]
+        piece: getPiece(state, ownProps.pieceKey),
+        currentPlayer: currentPlayer(state)
     }
 }
 
-export default connect(mapStateToProps)(Piece);
+export default connect(mapStateToProps, matchDispatchToProps)(Piece);

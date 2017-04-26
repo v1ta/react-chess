@@ -22912,6 +22912,7 @@
 	};
 
 	var validMove = function validMove(state, tile, cell) {
+
 	    var piece = state.activePiece;
 	    // TODO add castling case
 	    if (tile.piece && new RegExp(state.currentPlayer).test(tile.piece)) {
@@ -22939,7 +22940,6 @@
 	            if (colVector + currColumn === destColumn && rowVector + currRow === destRow) {
 
 	                if (tile.piece) {
-	                    console.log('opponent piece');
 	                    move.pieces[tile.piece] = {
 	                        alive: false,
 	                        x: boardSize,
@@ -22980,6 +22980,7 @@
 	};
 
 	var containsPiece = function containsPiece(state, boardCell) {
+
 	    var validBoardCell = function validBoardCell(boardCell) {
 	        var row = Number(boardCell.substr(1));
 
@@ -41091,7 +41092,6 @@
 
 	        var _this = _possibleConstructorReturn(this, (Piece.__proto__ || Object.getPrototypeOf(Piece)).call(this, props));
 
-	        var pieceKey = props.pieceKey;
 	        _this.state = {
 	            rel: { x: 0, y: 0 },
 	            pos: {
@@ -41111,6 +41111,7 @@
 	    _createClass(Piece, [{
 	        key: 'onMouseDown',
 	        value: function onMouseDown(event) {
+
 	            if (!new RegExp(this.props.currentPlayer).test(this.props.piece.type)) {
 	                return false;
 	            }
@@ -41121,7 +41122,6 @@
 	                box = ref.getBoundingClientRect();
 
 	            // Inform store which piece is being moved
-	            console.log(this.props.piece);
 	            this.props.activePiece(this.props.piece);
 
 	            // Record current location and cursor location
@@ -41143,6 +41143,7 @@
 	    }, {
 	        key: 'onMouseMove',
 	        value: function onMouseMove(event) {
+
 	            this.setState({
 	                pos: {
 	                    x: event.pageX - this.state.rel.x,
@@ -41155,6 +41156,7 @@
 	    }, {
 	        key: 'onMouseUp',
 	        value: function onMouseUp(event) {
+
 	            this.setState({
 	                dragging: false
 	            });
@@ -41173,8 +41175,10 @@
 	    }, {
 	        key: 'render',
 	        value: function render() {
+
 	            var x = void 0,
 	                y = void 0;
+
 	            if (this.state.dragging) {
 	                x = this.state.pos.x;
 	                y = this.state.pos.y;

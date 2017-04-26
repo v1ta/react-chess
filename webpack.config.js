@@ -1,6 +1,7 @@
 var webpack = require('webpack'),
+    copyWebpackPlugin = require('copy-webpack-plugin'),
     path = require('path'),
-    BUILD_DIR = path.resolve(__dirname, 'src/public'),
+    BUILD_DIR = path.resolve(__dirname, 'public'),
     APP_DIR = path.resolve(__dirname, 'src/js'),
     STYLE_DIR = path.resolve(__dirname, 'src/scss'),
     ASSET_DIR = path.resolve(__dirname, 'src/assets'),
@@ -10,6 +11,11 @@ var webpack = require('webpack'),
             path: BUILD_DIR,
             filename: 'bundle.js'
         },
+        plugins: [
+            new copyWebpackPlugin([
+                {from: ASSET_DIR, to: BUILD_DIR + '/assets'}
+            ])
+        ],
         module: {
             loaders: [
                 {
