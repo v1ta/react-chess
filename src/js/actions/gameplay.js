@@ -10,7 +10,8 @@ const board = {
     pieces: {},
     activePiece: {},
     moveHistory: [],
-    currentPlayer: 'white'
+    currentPlayer: 'white',
+    boardSize: boardSize
 };
 
 const dropPiece = (tile, cell) => {

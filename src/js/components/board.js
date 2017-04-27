@@ -4,31 +4,26 @@ import ReactDOM from 'react-dom';
 import {defaultBoard} from '../actions/gameplay';
 import Tile from '../containers/Tile';
 import Piece from '../containers/Piece'
-import $ from 'jquery';
 require('../../scss/style.scss');
-
-const width = $(document).width(),
-    height = $(document).height(),
-    boardSize = width < height ? width : height;
 
 class Board extends Component {
 
     constructor(props){
         super(props)
-
         this.gameBoard = this.createBoard();
     }
 
     createBoard() {
 
-        const board = {
-            tiles: [],
-            pieces: []
-        };
-
         let i = 0,
             row = [],
             defBoard = defaultBoard().board;
+
+        const board = {
+            tiles: [],
+            pieces: [],
+            boardSize: defBoard.boardSize
+        };
 
         for(var cell in defBoard.tiles) {
             let tile = defBoard.tiles[cell],
@@ -48,8 +43,8 @@ class Board extends Component {
                     key={pieceKey}
                     pieceKey={pieceKey}
                     style={{
-                        height: boardSize / 8,
-                        width: boardSize / 8
+                        height: board.boardSize / 8,
+                        width: board.boardSize / 8
                     }}
                 />);
             }
@@ -70,7 +65,13 @@ class Board extends Component {
 
     render(){
         return(
-            <div className="board" style={{width: boardSize, height:boardSize}}>
+            <div
+                className="board"
+                style={{
+                    width: this.gameBoard.boardSize,
+                    height: this.gameBoard.boardSize
+                }}
+            >
                 {this.gameBoard.tiles}
                 {this.gameBoard.pieces}
            </div>

@@ -1,10 +1,5 @@
 import {determinePiece, getMoveSet} from '../util/boardUtils';
 import u from 'updeep';
-import $ from 'jquery'
-
-const width = $(document).width(),
-    height = $(document).height(),
-    boardSize = width < height ? width : height;
 
 let yCoordDeadPiece = 0;
 
@@ -51,6 +46,7 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
 
         switch(pieceType) {
             case 'p':
+                // Opening move (2 tiles forward)
                 if (piece.moveSet.sMove && moveVector[1] === 0) {
                     if (moveVector[0] * 2 + currLocationVector[0] === destVector[0]
                         && moveVector[1] + currLocationVector[1] === destVector[1]) {
@@ -79,9 +75,19 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
                         && vector[1] + currLocationVector[1] === destVector[1]
                         && hasOpposingPiece ? true : false;
                 }
-
+                // Allow diagonal movement if tile has opposing piece
                 if (piece.moveSet.sMoves.some(pawnAttack)) {
                     return [true, null];
+                }
+                // Pawns can't attack via a forward move, block move
+                if (containsPiece(
+                    state,
+                    resolveBoardCell(
+                        moveVector[1] + currLocationVector[1],
+                        moveVector[0] + currLocationVector[0]
+                    )
+                )) {
+                    return [false, null];
                 }
 
                 break;
@@ -97,16 +103,16 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
     }
 
 
-    for (let i = 0; i < moveSet.moves.length; i++) {
+    for(let i = 0; i < moveSet.moves.length; i++) {
         let moveVector = moveSet.moves[i];
-        for (let j = 1; j <= moveSet.numMoves; j++) {
+        for(let j = 1; j <= moveSet.numMoves; j++) {
             let [isValid, sMove] = validMove(state, piece, cell, [moveVector[0] * j, moveVector[1] * j]);
 
             if (isValid) {
                 if (tile.piece) {
                     move.pieces[tile.piece] = {
                         alive: false,
-                        x: boardSize,
+                        x: state.boardSize,
                         y: yCoordDeadPiece
                     }
                     yCoordDeadPiece += 20;
@@ -184,7 +190,7 @@ const inCheck = (state, tempMove) => {
         cell;
 
     // Get king location for current player
-    if ( state.currentPlayer === 'black' ) {
+    if (state.currentPlayer === 'black') {
         cell = stateClone.pieces.blackke8.currentTile;
         tile = stateClone.tiles[cell];
     } else {

@@ -101,20 +101,21 @@ class Piece extends Component {
         }
 
         return(
-            <div
+            <a
+                href="#"
                 onMouseDown={this.onMouseDown}
                 ref={this.props.piece.type}
                 style={{
                     position: 'absolute',
                     left: x,
                     top: y,
-                    zIndex: 1
+                    zIndex: this.state.dragging ? 1 : 0
                 }}>
                 <img
                     src={'assets/' + this.props.piece.type + '.png'}
                     style={this.props.style}
                 />
-            </div>
+            </a>
         );
     }
 }
