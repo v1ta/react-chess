@@ -22871,6 +22871,8 @@
 	});
 	exports.getTile = exports.getPiece = exports.currentPlayer = exports.boardReducer = undefined;
 
+	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 	var _boardUtils = __webpack_require__(205);
 
 	var _updeep = __webpack_require__(206);
@@ -22898,7 +22900,7 @@
 	        case 'MOVE_PIECE':
 	            var tile = action.payload.tile,
 	                cell = action.payload.cell,
-	                move = validMove(state, tile, cell);
+	                move = movePiece(state, tile, cell);
 
 	            if (move) {
 	                state = (0, _updeep2.default)(move, state);
@@ -22911,7 +22913,7 @@
 	    return state;
 	};
 
-	var validMove = function validMove(state, tile, cell) {
+	var movePiece = function movePiece(state, tile, cell) {
 
 	    var piece = state.activePiece;
 	    // TODO add castling case
@@ -22920,10 +22922,6 @@
 	    }
 
 	    var moveSet = piece.moveSet,
-	        destColumn = cell[0].charCodeAt() - 97,
-	        destRow = Number(cell[1]),
-	        currColumn = piece.currentTile[0].charCodeAt() - 97,
-	        currRow = Number(piece.currentTile[1]),
 	        numMoves = moveSet.numMoves,
 	        move = {
 	        pieces: {},
@@ -22931,14 +22929,44 @@
 	        currentPlayer: state.currentPlayer === 'white' ? 'black' : 'white'
 	    };
 
+	    var validMove = function validMove(state, piece, destinationCell, moveVector) {
+	        var destVector = [Number(cell[1]), cell[0].charCodeAt() - 97],
+	            currLocationVector = [Number(piece.currentTile[1]), piece.currentTile[0].charCodeAt() - 97];
+
+	        switch (piece.type[5]) {
+	            case 'p':
+	                if (piece.moveSet.sMove && moveVector[1] === 0) {
+	                    if (moveVector[0] * 2 + currLocationVector[0] === destVector[0] && moveVector[1] + currLocationVector[1] === destVector[1]) {
+	                        return !containsPiece(state, resolveBoardCell(moveVector[1] + currLocationVector[1], moveVector[0] + currLocationVector[0])) ? [true, { sMove: false }] : [false, null];
+	                    }
+	                }
+
+	                var pawnAttack = function pawnAttack(vector) {
+	                    var hasOpposingPiece = containsPiece(state, resolveBoardCell(vector[1] + currLocationVector[1], vector[0] + currLocationVector[0]), piece.type.includes('white') ? 'black' : 'white');
+	                    return vector[0] + currLocationVector[0] === destVector[0] && vector[1] + currLocationVector[1] === destVector[1] && hasOpposingPiece ? true : false;
+	                };
+
+	                if (piece.moveSet.sMoves.some(pawnAttack)) {
+	                    return [true, null];
+	                }
+
+	                break;
+	            case 'k':
+	                break;
+	        }
+
+	        return moveVector[0] + currLocationVector[0] === destVector[0] && moveVector[1] + currLocationVector[1] === destVector[1] ? [true, null] : [false, null];
+	    };
+
 	    for (var i = 0; i < moveSet.moves.length; i++) {
 	        var moveVector = moveSet.moves[i];
 	        for (var j = 1; j <= numMoves; j++) {
-	            var rowVector = moveVector[0] * j,
-	                colVector = moveVector[1] * j;
+	            var _validMove = validMove(state, piece, cell, [moveVector[0] * j, moveVector[1] * j]),
+	                _validMove2 = _slicedToArray(_validMove, 2),
+	                isValid = _validMove2[0],
+	                sMove = _validMove2[1];
 
-	            if (colVector + currColumn === destColumn && rowVector + currRow === destRow) {
-
+	            if (isValid) {
 	                if (tile.piece) {
 	                    move.pieces[tile.piece] = {
 	                        alive: false,
@@ -22965,10 +22993,11 @@
 
 	                // Update piece
 	                move.pieces[piece.type + piece.startingTile].currentTile = cell;
+	                if (sMove) {
+	                    move.pieces[piece.type + piece.startingTile].moveSet = sMove;
+	                }
 
 	                return move;
-	            } else if (!containsPiece(state, resolveBoardCell(colVector + currColumn, rowVector + currRow))) {
-	                break;
 	            }
 	        }
 	    }
@@ -22980,6 +23009,8 @@
 	};
 
 	var containsPiece = function containsPiece(state, boardCell) {
+	    var enemy = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
 
 	    var validBoardCell = function validBoardCell(boardCell) {
 	        var row = Number(boardCell.substr(1));
@@ -22997,7 +23028,13 @@
 	        return false;
 	    }
 
-	    return !state.tiles[boardCell].piece;
+	    var tilePiece = state.tiles[boardCell].piece;
+
+	    if (enemy && tilePiece) {
+	        return tilePiece.includes(enemy);
+	    } else {
+	        return tilePiece ? true : false;
+	    }
 	};
 
 	var currentPlayer = function currentPlayer(state) {
