@@ -22898,9 +22898,7 @@
 
 	    switch (action.type) {
 	        case 'MOVE_PIECE':
-	            var tile = action.payload.tile,
-	                cell = action.payload.cell,
-	                move = movePiece(state, tile, cell);
+	            var move = movePiece(state, state.activePiece, action.payload.tile, action.payload.cell);
 
 	            if (move) {
 	                state = (0, _updeep2.default)(move, state);
@@ -22913,16 +22911,15 @@
 	    return state;
 	};
 
-	var movePiece = function movePiece(state, tile, cell) {
+	var movePiece = function movePiece(state, piece, tile, cell) {
+	    var moveCheck = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
 
-	    var piece = state.activePiece;
 	    // TODO add castling case
 	    if (tile.piece && new RegExp(state.currentPlayer).test(tile.piece)) {
 	        return false;
 	    }
 
 	    var moveSet = piece.moveSet,
-	        numMoves = moveSet.numMoves,
 	        move = {
 	        pieces: {},
 	        tiles: {},
@@ -22930,19 +22927,23 @@
 	    };
 
 	    var validMove = function validMove(state, piece, destinationCell, moveVector) {
-	        var destVector = [Number(cell[1]), cell[0].charCodeAt() - 97],
-	            currLocationVector = [Number(piece.currentTile[1]), piece.currentTile[0].charCodeAt() - 97];
 
-	        switch (piece.type[5]) {
+	        var destVector = [Number(cell[1]), cell[0].charCodeAt() - 97],
+	            currLocationVector = [Number(piece.currentTile[1]), piece.currentTile[0].charCodeAt() - 97],
+	            pieceType = piece.type[5];
+
+	        switch (pieceType) {
 	            case 'p':
 	                if (piece.moveSet.sMove && moveVector[1] === 0) {
 	                    if (moveVector[0] * 2 + currLocationVector[0] === destVector[0] && moveVector[1] + currLocationVector[1] === destVector[1]) {
-	                        return !containsPiece(state, resolveBoardCell(moveVector[1] + currLocationVector[1], moveVector[0] + currLocationVector[0])) ? [true, { sMove: false }] : [false, null];
+	                        return !containsPiece(state, resolveBoardCell(moveVector[1] + currLocationVector[1], moveVector[0] * 2 + currLocationVector[0])) ? [true, { sMove: false }] : [false, null];
 	                    }
 	                }
 
 	                var pawnAttack = function pawnAttack(vector) {
+
 	                    var hasOpposingPiece = containsPiece(state, resolveBoardCell(vector[1] + currLocationVector[1], vector[0] + currLocationVector[0]), piece.type.includes('white') ? 'black' : 'white');
+
 	                    return vector[0] + currLocationVector[0] === destVector[0] && vector[1] + currLocationVector[1] === destVector[1] && hasOpposingPiece ? true : false;
 	                };
 
@@ -22952,15 +22953,16 @@
 
 	                break;
 	            case 'k':
+	                // TODO castling
 	                break;
 	        }
 
-	        return moveVector[0] + currLocationVector[0] === destVector[0] && moveVector[1] + currLocationVector[1] === destVector[1] ? [true, null] : [false, null];
+	        return moveVector[0] + currLocationVector[0] === destVector[0] && moveVector[1] + currLocationVector[1] === destVector[1] && checkPath(state, currLocationVector, destVector, pieceType) ? [true, null] : [false, null];
 	    };
 
 	    for (var i = 0; i < moveSet.moves.length; i++) {
 	        var moveVector = moveSet.moves[i];
-	        for (var j = 1; j <= numMoves; j++) {
+	        for (var j = 1; j <= moveSet.numMoves; j++) {
 	            var _validMove = validMove(state, piece, cell, [moveVector[0] * j, moveVector[1] * j]),
 	                _validMove2 = _slicedToArray(_validMove, 2),
 	                isValid = _validMove2[0],
@@ -22997,11 +22999,72 @@
 	                    move.pieces[piece.type + piece.startingTile].moveSet = sMove;
 	                }
 
-	                return move;
+	                if (moveCheck) {
+	                    return !inCheck(state, move) ? move : false;
+	                } else {
+	                    return move;
+	                }
 	            }
 	        }
 	    }
 	    return false;
+	};
+
+	var checkPath = function checkPath(state, originVector, destVector, pieceType) {
+
+	    if (!/[rqb]/.test(pieceType)) {
+	        return true;
+	    }
+
+	    var getDirection = function getDirection(origin, dest) {
+	        return origin < dest ? 1 : origin > dest ? -1 : 0;
+	    };
+
+	    // Determine direction
+	    var yDir = getDirection(originVector[0], destVector[0]),
+	        xDir = getDirection(originVector[1], destVector[1]);
+
+	    var nextTile = function nextTile() {
+	        destVector[0] -= yDir;
+	        destVector[1] -= xDir;
+	    };
+
+	    nextTile();
+
+	    while (destVector[0] !== originVector[0] || destVector[1] !== originVector[1]) {
+	        if (containsPiece(state, resolveBoardCell(destVector[1], destVector[0]))) {
+	            return false;
+	        } else {
+	            nextTile();
+	        }
+	    }
+
+	    return true;
+	};
+
+	var inCheck = function inCheck(state, tempMove) {
+
+	    var stateClone = (0, _updeep2.default)(tempMove, JSON.parse(JSON.stringify(state))),
+	        tile = void 0,
+	        cell = void 0;
+
+	    // Get king location for current player
+	    if (state.currentPlayer === 'black') {
+	        cell = stateClone.pieces.blackke8.currentTile;
+	        tile = stateClone.tiles[cell];
+	    } else {
+	        cell = stateClone.pieces.whiteke1.currentTile;
+	        tile = stateClone.tiles[cell];
+	    }
+
+	    return Object.keys(stateClone.pieces).map(function (key) {
+	        return stateClone.pieces[key];
+	    }).some(function (piece) {
+	        if (piece.type.includes(state.currentPlayer)) {
+	            return false;
+	        }
+	        return movePiece(stateClone, piece, tile, cell, false) ? true : false;
+	    });
 	};
 
 	var resolveBoardCell = function resolveBoardCell(colNumber, rowNumber) {
@@ -23063,7 +23126,8 @@
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	function determinePiece(tileNumber) {
+	var determinePiece = function determinePiece(tileNumber) {
+	    var extras = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
 	    // Determine piece type
 	    var namedPiece = function namedPiece(tileNumber) {
@@ -23077,11 +23141,11 @@
 	            // Bishop
 	            case 2:case 5:
 	                return 'b';
+	            // Queen
 	            case 3:
-	                // Queen
 	                return 'q';
+	            // King
 	            case 4:
-	                // King
 	                return 'k';
 	            default:
 	                return false;
@@ -23089,71 +23153,58 @@
 	    };
 
 	    var createPiece = function createPiece(type) {
-	        return {
+	        var extras = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+	        return Object.assign({
 	            type: type,
-	            moveSet: getMoveSet(type),
-	            x: -1,
-	            y: -1
-	        };
+	            moveSet: getMoveSet(type)
+	        }, extras);
 	    };
 
 	    // Determine piece faction
 	    if (tileNumber <= 15) {
-	        var type = tileNumber <= 7 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
-	        return createPiece(type);
+	        return createPiece(tileNumber <= 7 ? 'white' + namedPiece(tileNumber) : 'white' + 'p', extras);
 	    } else if (tileNumber >= 48) {
-	        var _type = tileNumber >= 56 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
-	        return createPiece(_type);
+	        return createPiece(tileNumber >= 56 ? 'black' + namedPiece(tileNumber) : 'black' + 'p', extras);
 	    } else {
 	        return false;
 	    }
-	}
+	};
 
-	function getMoveSet(piece) {
+	var getMoveSet = function getMoveSet(piece) {
+
+	    var moveSet = function moveSet(moves, numMoves) {
+	        var extras = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+	        return Object.assign({
+	            moves: moves,
+	            numMoves: numMoves
+	        }, extras);
+	    };
 
 	    switch (piece[5]) {
 	        case 'p':
-	            var moveSet = {
-	                moves: [[1, 0]],
-	                sMoves: [[1, -1], [1, 1]],
-	                numMoves: 1,
-	                sMove: true
-	            };
-	            if (/black/.test(piece)) {
-	                moveSet.moves = [[-1, 0]];
-	                moveSet.sMoves = [[-1, -1], [-1, 1]];
-	            }
-	            return moveSet;
+	            var factionFlag = /black/.test(piece);
 
-	        case 'b':
-	            return {
-	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1]],
-	                numMoves: 7
-	            };
-	        case 'k':
-	            return {
-	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
-	                sMoves: [[0, 1], [0, -1]],
-	                numMoves: 1,
+	            return moveSet(factionFlag ? [[-1, 0]] : [[1, 0]], 1, {
+	                sMoves: factionFlag ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]],
 	                sMove: true
-	            };
+	            });
+	        case 'b':
+	            return moveSet([[1, 1], [-1, 1], [-1, -1], [1, -1]], 7);
+	        case 'k':
+	            return moveSet([[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]], 1, {
+	                sMoves: [[0, 1], [0, -1]],
+	                sMove: true
+	            });
 	        case 'n':
-	            return {
-	                moves: [[2, 1], [-2, 1], [-2, -1], [2, -1], [1, 2], [-1, 2], [-1, -2], [1, -2]],
-	                numMoves: 1
-	            };
+	            return moveSet([[2, 1], [-2, 1], [-2, -1], [2, -1], [1, 2], [-1, 2], [-1, -2], [1, -2]], 1);
 	        case 'q':
-	            return {
-	                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
-	                numMoves: 7
-	            };
+	            return moveSet([[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]], 7);
 	        case 'r':
-	            return {
-	                moves: [[1, 0], [0, 1], [-1, 0], [0, -1]],
-	                numMoves: 7
-	            };
+	            return moveSet([[1, 0], [0, 1], [-1, 0], [0, -1]], 7);
 	    }
-	}
+	};
 
 	exports.determinePiece = determinePiece;
 	exports.getMoveSet = getMoveSet;
@@ -40842,10 +40893,13 @@
 	var Board = function (_Component) {
 	    _inherits(Board, _Component);
 
-	    function Board() {
+	    function Board(props) {
 	        _classCallCheck(this, Board);
 
-	        return _possibleConstructorReturn(this, (Board.__proto__ || Object.getPrototypeOf(Board)).apply(this, arguments));
+	        var _this = _possibleConstructorReturn(this, (Board.__proto__ || Object.getPrototypeOf(Board)).call(this, props));
+
+	        _this.gameBoard = _this.createBoard();
+	        return _this;
 	    }
 
 	    _createClass(Board, [{
@@ -40896,13 +40950,11 @@
 	    }, {
 	        key: 'render',
 	        value: function render() {
-	            var gameBoard = this.createBoard();
-
 	            return _react2.default.createElement(
 	                'div',
 	                { className: 'board', style: { width: boardSize, height: boardSize } },
-	                gameBoard.tiles,
-	                gameBoard.pieces
+	                this.gameBoard.tiles,
+	                this.gameBoard.pieces
 	            );
 	        }
 	    }]);
@@ -40975,7 +41027,13 @@
 	        for (var j = 0; j < 8; j++) {
 	            var cellId = String.fromCharCode(97 + j) + (i + 1),
 	                tileNumber = i * 8 + j,
-	                piece = (0, _boardUtils.determinePiece)(tileNumber);
+	                piece = (0, _boardUtils.determinePiece)(tileNumber, {
+	                x: x,
+	                y: y,
+	                startingTile: cellId,
+	                currentTile: cellId,
+	                alive: true
+	            });
 
 	            board.tiles[cellId] = {
 	                backgroundColor: (tileColorFlag = !tileColorFlag) ? 'white' : 'black',
@@ -40985,11 +41043,6 @@
 	            };
 
 	            if (piece) {
-	                piece.x = x;
-	                piece.y = y;
-	                piece.startingTile = cellId;
-	                piece.currentTile = cellId;
-	                piece.alive = true;
 	                board.pieces[piece.type + cellId] = piece;
 	            }
 	            x += boardSize / 8;
@@ -41130,7 +41183,10 @@
 	        var _this = _possibleConstructorReturn(this, (Piece.__proto__ || Object.getPrototypeOf(Piece)).call(this, props));
 
 	        _this.state = {
-	            rel: { x: 0, y: 0 },
+	            rel: {
+	                x: 0,
+	                y: 0
+	            },
 	            pos: {
 	                x: props.piece.x,
 	                y: props.piece.y

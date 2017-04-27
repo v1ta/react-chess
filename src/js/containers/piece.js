@@ -11,7 +11,10 @@ class Piece extends Component {
         super(props);
 
         this.state = {
-            rel: {x: 0, y: 0},
+            rel: {
+                x: 0,
+                y: 0
+            },
             pos: {
                 x: props.piece.x,
                 y: props.piece.y

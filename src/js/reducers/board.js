@@ -12,9 +12,12 @@ const boardReducer = (state={}, action) => {
 
     switch(action.type) {
         case 'MOVE_PIECE':
-            let tile = action.payload.tile,
-                cell = action.payload.cell,
-                move = movePiece(state, state.activePiece, tile, cell);
+            let move = movePiece(
+                    state,
+                    state.activePiece,
+                    action.payload.tile,
+                    action.payload.cell
+                );
 
             if (move) {
                 state = u(move, state);
@@ -41,10 +44,12 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
         };
 
     const validMove = (state, piece, destinationCell, moveVector) => {
-        let destVector = [Number(cell[1]), cell[0].charCodeAt() - 97],
-            currLocationVector = [Number(piece.currentTile[1]), piece.currentTile[0].charCodeAt() - 97];
 
-        switch(piece.type[5]) {
+        let destVector = [Number(cell[1]), cell[0].charCodeAt() - 97],
+            currLocationVector = [Number(piece.currentTile[1]), piece.currentTile[0].charCodeAt() - 97],
+            pieceType = piece.type[5];
+
+        switch(pieceType) {
             case 'p':
                 if (piece.moveSet.sMove && moveVector[1] === 0) {
                     if (moveVector[0] * 2 + currLocationVector[0] === destVector[0]
@@ -53,13 +58,14 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
                             state,
                             resolveBoardCell(
                                 moveVector[1] + currLocationVector[1],
-                                moveVector[0] + currLocationVector[0]
+                                moveVector[0] * 2 + currLocationVector[0]
                             )
                         ) ? [true,  {sMove: false}] : [false, null];
                     }
                 }
 
                 const pawnAttack = (vector) => {
+
                     let hasOpposingPiece = containsPiece(
                         state,
                         resolveBoardCell(
@@ -68,6 +74,7 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
                         ),
                         piece.type.includes('white') ? 'black' : 'white'
                     );
+
                     return vector[0] + currLocationVector[0] === destVector[0]
                         && vector[1] + currLocationVector[1] === destVector[1]
                         && hasOpposingPiece ? true : false;
@@ -79,19 +86,20 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
 
                 break;
             case 'k':
+                // TODO castling
                 break;
         }
 
         return moveVector[0] + currLocationVector[0] === destVector[0]
             && moveVector[1] + currLocationVector[1] === destVector[1]
+            && checkPath(state, currLocationVector, destVector, pieceType)
             ? [true, null] : [false, null];
-
     }
 
 
-    for(var i = 0; i < moveSet.moves.length; i++) {
+    for (let i = 0; i < moveSet.moves.length; i++) {
         let moveVector = moveSet.moves[i];
-        for (var j = 1; j <= moveSet.numMoves; j++) {
+        for (let j = 1; j <= moveSet.numMoves; j++) {
             let [isValid, sMove] = validMove(state, piece, cell, [moveVector[0] * j, moveVector[1] * j]);
 
             if (isValid) {
@@ -131,11 +139,42 @@ const movePiece = (state, piece, tile, cell, moveCheck = true) => {
                     return move;
                 }
 
-
             }
         }
     }
     return false;
+}
+
+const checkPath = (state, originVector, destVector, pieceType) => {
+
+    if (!/[rqb]/.test(pieceType)){
+        return true;
+    }
+
+    const getDirection = (origin, dest) => {
+        return origin < dest ? 1 : origin > dest ? -1 : 0;
+    }
+
+    // Determine direction
+    let yDir = getDirection(originVector[0], destVector[0]),
+        xDir = getDirection(originVector[1], destVector[1]);
+
+    const nextTile = () => {
+        destVector[0] -= yDir;
+        destVector[1] -= xDir;
+    }
+
+    nextTile();
+
+    while(destVector[0] !== originVector[0] || destVector[1] !== originVector[1]) {
+        if (containsPiece(state, resolveBoardCell(destVector[1], destVector[0]))) {
+            return false;
+        } else {
+            nextTile();
+        }
+    }
+
+    return true;
 }
 
 const inCheck = (state, tempMove) => {
@@ -170,7 +209,7 @@ const resolveBoardCell = (colNumber, rowNumber) => {
 
 const containsPiece = (state, boardCell, enemy = false) => {
 
-    var validBoardCell = function(boardCell) {
+    const validBoardCell = function(boardCell) {
         let row = Number(boardCell.substr(1));
 
         if (!/[a-h]/.test(boardCell[0])) {

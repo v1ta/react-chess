@@ -45,21 +45,22 @@ const defaultBoard = () => {
         for (let j = 0; j < 8; j++) {
             let cellId = String.fromCharCode(97 + j) + (i + 1),
                 tileNumber = i * 8 + j,
-                piece = determinePiece(tileNumber);
+                piece = determinePiece(tileNumber, {
+                    x: x,
+                    y: y,
+                    startingTile: cellId,
+                    currentTile: cellId,
+                    alive: true
+                });
 
             board.tiles[cellId] = {
                 backgroundColor: (tileColorFlag = !tileColorFlag) ? 'white' : 'black',
                 piece: piece ? piece.type + cellId : false,
                 x: x,
                 y: y
-            }
+            };
 
             if (piece) {
-                piece.x = x;
-                piece.y = y;
-                piece.startingTile = cellId;
-                piece.currentTile = cellId;
-                piece.alive = true;
                 board.pieces[piece.type + cellId] = piece;
             }
             x += boardSize / 8;

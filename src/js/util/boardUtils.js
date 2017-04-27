@@ -1,7 +1,6 @@
-function determinePiece(tileNumber) {
-
+const determinePiece = (tileNumber, extras = {}) => {
     // Determine piece type
-    var namedPiece = (tileNumber) => {
+    const namedPiece = (tileNumber) => {
         switch (tileNumber % 8) {
             // Rook
             case 0: case 7:
@@ -12,81 +11,64 @@ function determinePiece(tileNumber) {
             // Bishop
             case 2: case 5:
                 return 'b';
-            case 3:
             // Queen
+            case 3:
                 return 'q';
-            case 4:
             // King
+            case 4:
                 return 'k'
             default:
                 return false;
         }
     }
 
-    var createPiece = (type) => {
-        return {
+    const createPiece = (type, extras = {}) => {
+        return Object.assign({
             type: type,
-            moveSet: getMoveSet(type),
-            x: -1,
-            y: -1
-        }
+            moveSet: getMoveSet(type)
+        }, extras);
     }
 
     // Determine piece faction
     if (tileNumber <= 15) {
-        let type = tileNumber <=7 ? 'white' + namedPiece(tileNumber) : 'white' + 'p';
-        return createPiece(type)
+        return createPiece(tileNumber <= 7 ? 'white' + namedPiece(tileNumber) : 'white' + 'p', extras);
     } else if (tileNumber >= 48) {
-        let type = tileNumber >= 56 ? 'black' + namedPiece(tileNumber) : 'black' + 'p';
-        return createPiece(type)
+        return createPiece(tileNumber >= 56 ? 'black' + namedPiece(tileNumber) : 'black' + 'p', extras);
     } else {
         return false;
     }
 }
 
-function getMoveSet(piece) {
+const getMoveSet = (piece) => {
+
+    const moveSet = (moves, numMoves, extras = {}) => {
+        return Object.assign({
+            moves: moves,
+            numMoves: numMoves
+        }, extras);
+    }
 
     switch(piece[5]) {
         case 'p':
-            let moveSet = {
-                moves: [[1, 0]],
-                sMoves: [[1, -1], [1, 1]],
-                numMoves: 1,
-                sMove: true,
-            }
-            if (/black/.test(piece)) {
-                moveSet.moves = [[-1, 0]];
-                moveSet.sMoves = [[-1, -1], [-1, 1]];
-            }
-            return moveSet;
+            let factionFlag = /black/.test(piece);
 
-        case 'b':
-            return {
-                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1]],
-                numMoves: 7
-            }
-        case 'k':
-            return {
-                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
-                sMoves: [[0, 1], [0, -1]],
-                numMoves: 1,
+            return  moveSet(factionFlag ? [[-1, 0]] : [[1, 0]], 1, {
+                sMoves : factionFlag ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]],
                 sMove: true
-            }
+            });
+        case 'b':
+            return moveSet([[1, 1], [-1, 1], [-1, -1], [1, -1]], 7);
+        case 'k':
+            return moveSet([[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]], 1, {
+                sMoves: [[0, 1], [0, -1]],
+                sMove: true
+            });
         case 'n':
-            return {
-                moves: [[2, 1], [-2, 1], [-2, -1], [2, -1], [1, 2], [-1, 2], [-1, -2], [1, -2]],
-                numMoves: 1
-            }
+            return moveSet([[2, 1], [-2, 1], [-2, -1], [2, -1], [1, 2], [-1, 2], [-1, -2], [1, -2]], 1);
         case 'q':
-            return {
-                moves: [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]],
-                numMoves: 7
-            }
+            return moveSet([[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 0], [0, 1], [-1, 0], [0, -1]], 7);
         case 'r':
-            return {
-                moves: [[1, 0], [0, 1], [-1, 0], [0, -1]],
-                numMoves: 7
-            }
+            return moveSet([[1, 0], [0, 1], [-1, 0], [0, -1]], 7);
     }
 }
 

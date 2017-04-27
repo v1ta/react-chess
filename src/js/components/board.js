@@ -13,6 +13,12 @@ const width = $(document).width(),
 
 class Board extends Component {
 
+    constructor(props){
+        super(props)
+
+        this.gameBoard = this.createBoard();
+    }
+
     createBoard() {
 
         const board = {
@@ -63,12 +69,10 @@ class Board extends Component {
     }
 
     render(){
-        let gameBoard = this.createBoard();
-
         return(
             <div className="board" style={{width: boardSize, height:boardSize}}>
-                {gameBoard.tiles}
-                {gameBoard.pieces}
+                {this.gameBoard.tiles}
+                {this.gameBoard.pieces}
            </div>
         );
     }
