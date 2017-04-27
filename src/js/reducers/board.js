@@ -14,7 +14,7 @@ const boardReducer = (state={}, action) => {
         case 'MOVE_PIECE':
             let tile = action.payload.tile,
                 cell = action.payload.cell,
-                move = movePiece(state, tile, cell);
+                move = movePiece(state, state.activePiece, tile, cell);
 
             if (move) {
                 state = u(move, state);
@@ -27,16 +27,13 @@ const boardReducer = (state={}, action) => {
     return state;
 }
 
-const movePiece = (state, tile, cell) => {
-
-    let piece = state.activePiece;
+const movePiece = (state, piece, tile, cell, moveCheck = true) => {
     // TODO add castling case
     if (tile.piece && new RegExp(state.currentPlayer).test(tile.piece)) {
         return false;
     }
 
     let moveSet = piece.moveSet,
-        numMoves = moveSet.numMoves,
         move = {
             pieces: {},
             tiles: {},
@@ -94,7 +91,7 @@ const movePiece = (state, tile, cell) => {
 
     for(var i = 0; i < moveSet.moves.length; i++) {
         let moveVector = moveSet.moves[i];
-        for (var j = 1; j <= numMoves; j++) {
+        for (var j = 1; j <= moveSet.numMoves; j++) {
             let [isValid, sMove] = validMove(state, piece, cell, [moveVector[0] * j, moveVector[1] * j]);
 
             if (isValid) {
@@ -128,11 +125,43 @@ const movePiece = (state, tile, cell) => {
                     move.pieces[piece.type + piece.startingTile].moveSet = sMove
                 }
 
-                return move;
+                if (moveCheck) {
+                    return !inCheck(state, move) ? move : false;
+                } else {
+                    return move;
+                }
+
+
             }
         }
     }
     return false;
+}
+
+const inCheck = (state, tempMove) => {
+
+    let stateClone = u(tempMove, JSON.parse(JSON.stringify(state))),
+        tile,
+        cell;
+
+    // Get king location for current player
+    if ( state.currentPlayer === 'black' ) {
+        cell = stateClone.pieces.blackke8.currentTile;
+        tile = stateClone.tiles[cell];
+    } else {
+        cell = stateClone.pieces.whiteke1.currentTile;
+        tile = stateClone.tiles[cell];
+    }
+
+    return Object
+        .keys(stateClone.pieces)
+        .map(key => stateClone.pieces[key])
+        .some((piece) => {
+            if (piece.type.includes(state.currentPlayer)) {
+                return false;
+            }
+            return movePiece(stateClone, piece, tile, cell, false) ? true : false;
+        });
 }
 
 const resolveBoardCell = (colNumber, rowNumber) => {
