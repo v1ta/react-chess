@@ -4,7 +4,7 @@
   "description": "chess implemented in react/redux",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "node_modules/.bin/webpack"
   },
   "repository": {
     "type": "git",
